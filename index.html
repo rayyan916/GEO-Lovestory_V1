@@ -1,0 +1,536 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>構造的心跳：與災害的浪漫邂逅</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700&display=swap');
+        
+        body {
+            font-family: 'Noto Sans TC', sans-serif;
+            user-select: none;
+            overflow: hidden; /* 防止滾動，保持遊戲視窗固定 */
+            background-color: #1a202c;
+        }
+
+        /* 遊戲主視窗 */
+        #game-container {
+            position: relative;
+            width: 100%;
+            max-width: 800px;
+            height: 100svh; /* 適應手機的實體高度 */
+            max-height: 600px;
+            margin: 0 auto;
+            background-size: cover;
+            background-position: center;
+            transition: background-image 0.5s ease-in-out;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+            overflow: hidden;
+        }
+
+        @media (min-width: 768px) {
+            #game-container {
+                height: 80vh;
+                margin-top: 5vh;
+                border-radius: 1rem;
+            }
+        }
+
+        /* 對話框樣式 */
+        .dialogue-box {
+            background: rgba(25, 30, 45, 0.9);
+            border: 2px solid #4a5568;
+            backdrop-filter: blur(5px);
+        }
+
+        /* 打字機效果游標 */
+        .typing-cursor::after {
+            content: '▼';
+            display: inline-block;
+            margin-left: 5px;
+            animation: blink 1s infinite;
+            color: #a0aec0;
+            font-size: 0.8em;
+        }
+
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0; }
+        }
+
+        /* 角色立繪動畫 */
+        .character-sprite {
+            transition: all 0.3s ease;
+            filter: drop-shadow(0 10px 15px rgba(0,0,0,0.5));
+        }
+        
+        .character-enter {
+            animation: slideUp 0.5s forwards;
+        }
+
+        @keyframes slideUp {
+            from { transform: translateY(50px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        /* 背景漸變預設 */
+        .bg-office { background: linear-gradient(to bottom, #2c3e50, #3498db); }
+        .bg-volcano { background: linear-gradient(to bottom, #8e44ad, #c0392b); }
+        .bg-coast { background: linear-gradient(to bottom, #1abc9c, #2980b9); }
+        .bg-fault { background: linear-gradient(to bottom, #7f8c8d, #2c3e50); }
+        .bg-ending { background: linear-gradient(to bottom, #f39c12, #d35400); }
+    </style>
+</head>
+<body class="flex items-center justify-center min-h-screen text-white">
+
+    <div id="game-container" class="bg-office flex flex-col justify-between">
+        
+        <!-- 標題畫面 -->
+        <div id="title-screen" class="absolute inset-0 flex flex-col items-center justify-center bg-gray-900 bg-opacity-90 z-50">
+            <h1 class="text-3xl md:text-5xl font-bold text-center mb-4 text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-red-500">
+                構造的心跳<br><span class="text-2xl md:text-3xl text-gray-300">與災害的浪漫邂逅</span>
+            </h1>
+            <p class="text-gray-400 mb-8 max-w-md text-center px-4">結合《機會與風險》地理知識的戀愛模擬遊戲。你的選擇將決定你的命運，以及你對構造災害的了解程度！</p>
+            <button onclick="startGame()" class="px-8 py-3 bg-blue-600 hover:bg-blue-500 rounded-full text-xl font-bold transition transform hover:scale-105 shadow-lg shadow-blue-500/50">
+                開始研究
+            </button>
+        </div>
+
+        <!-- 遊戲主體區域 -->
+        <!-- 好感度提示 -->
+        <div id="affection-toast" class="absolute top-4 right-4 bg-pink-500 text-white px-3 py-1 rounded-full text-sm opacity-0 transition-opacity duration-300 z-40">
+            好感度 UP! ❤️
+        </div>
+
+        <!-- 角色立繪區 (使用 Emoji 圓形圖標代替圖片確保穩定顯示) -->
+        <div class="flex-grow flex items-end justify-center relative overflow-hidden pb-4">
+            <div id="character-container" class="character-sprite hidden flex flex-col items-center">
+                <div id="character-emoji" class="text-8xl md:text-9xl bg-white rounded-full p-4 shadow-2xl flex items-center justify-center w-32 h-32 md:w-48 md:h-48 border-4 border-gray-300">
+                    <!-- Emoji will be injected here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- 對話框區域 -->
+        <div id="ui-area" class="w-full px-2 pb-2 md:px-4 md:pb-4 hidden z-30">
+            
+            <!-- 選項區 -->
+            <div id="choices-container" class="flex flex-col gap-2 mb-2 w-full max-w-2xl mx-auto">
+                <!-- Buttons will be injected here -->
+            </div>
+
+            <!-- 文字框 -->
+            <div class="dialogue-box rounded-xl p-4 md:p-6 w-full max-w-2xl mx-auto relative cursor-pointer" onclick="advanceDialogue()">
+                <div id="speaker-name" class="absolute -top-4 left-4 bg-blue-600 text-white px-4 py-1 rounded-lg font-bold shadow-md text-sm md:text-base border-2 border-blue-400">
+                    主角
+                </div>
+                <div id="dialogue-text" class="text-gray-100 text-base md:text-lg min-h-[4.5rem] leading-relaxed">
+                    <!-- Text will be typed here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 遊戲狀態
+        let state = {
+            currentScene: 'start',
+            dialogueIndex: 0,
+            isTyping: false,
+            affection: {
+                quake: 0,
+                volcano: 0,
+                tsunami: 0
+            }
+        };
+
+        // 角色設定
+        const characters = {
+            narrator: { name: "主任", emoji: "👨‍🔬", color: "border-gray-400" },
+            quake: { name: "震君 (地震)", emoji: "🪨", color: "border-yellow-600" },
+            volcano: { name: "炎夏 (火山)", emoji: "🌋", color: "border-red-500" },
+            tsunami: { name: "淼淼 (海嘯)", emoji: "🌊", color: "border-blue-400" }
+        };
+
+        // 遊戲劇本 (結合 PDF 內容)
+        // 參考：03b (成因、分佈)、03c (影響、防禦措施)
+        const story = {
+            'start': {
+                bg: 'bg-office',
+                dialogues: [
+                    { speaker: 'narrator', text: "歡迎來到『國際地質災害監測中心』。我是你的主任。" },
+                    { speaker: 'narrator', text: "我們的工作是研究構造災害（Tectonic hazards），也就是由板塊運動引起的災害。" },
+                    { speaker: 'narrator', text: "為了讓你更了解目標，我們使用了最新的『災害擬人化投影系統』。你要親自去會會他們，從中學習防禦知識。" },
+                    { speaker: 'narrator', text: "第一站，我們去板塊邊界。準備好了嗎？" }
+                ],
+                next: 'meet_quake'
+            },
+            'meet_quake': {
+                bg: 'bg-fault',
+                character: 'quake',
+                dialogues: [
+                    { speaker: 'quake', text: "喲！新來的小子/丫頭？我是震君。我性格很急躁，一旦累積的『應力』超過岩石的抗力，我就會爆發！" },
+                    { speaker: 'quake', text: "我平時最喜歡在『破壞性板塊邊界』活動，因為那裡兩塊板塊相撞，摩擦力超大！" },
+                    { speaker: 'quake', text: "考考你，你知道用來量度我『釋放了多少能量』的標準是什麼嗎？" }
+                ],
+                choices: [
+                    { text: "修訂麥加利地震烈度 (Modified Mercalli Scale)", next: 'quake_wrong_1' },
+                    { text: "黎克特震級 (Richter Scale)", next: 'quake_right_1', target: 'quake', points: 10 }
+                ]
+            },
+            'quake_wrong_1': {
+                bg: 'bg-fault',
+                character: 'quake',
+                dialogues: [
+                    { speaker: 'quake', text: "唉，你上課沒專心喔。修訂麥加利地震烈度是量度『破壞程度（烈度）』的，分為1到12度。" },
+                    { speaker: 'quake', text: "量度我釋放的能量（強度）是黎克特震級啦！" }
+                ],
+                next: 'quake_q2'
+            },
+            'quake_right_1': {
+                bg: 'bg-fault',
+                character: 'quake',
+                dialogues: [
+                    { speaker: 'quake', text: "答對了！黎克特震級正是量度強度的標準。看來你對我挺了解的嘛。" }
+                ],
+                next: 'quake_q2'
+            },
+            'quake_q2': {
+                bg: 'bg-fault',
+                character: 'quake',
+                dialogues: [
+                    { speaker: 'quake', text: "再問你一個問題。有時候我會在離地面很近的地方爆發（震源深度少於70公里），有時則很深。你覺得哪種對你們人類破壞最大？" }
+                ],
+                choices: [
+                    { text: "淺源地震 (Shallow-focus)", next: 'quake_right_2', target: 'quake', points: 15 },
+                    { text: "深源地震 (Deep-focus)", next: 'quake_wrong_2' }
+                ]
+            },
+            'quake_right_2': {
+                bg: 'bg-fault',
+                character: 'quake',
+                dialogues: [
+                    { speaker: 'quake', text: "沒錯！淺源地震因為震源與地面的距離短，能量流失少，所以破壞力最大！例如1999年台灣921大地震。" },
+                    { speaker: 'quake', text: "跟你聊天挺開心的，下次見！我要去引發一些『土壤液化』(Liquefaction) 玩玩了。" }
+                ],
+                next: 'meet_volcano'
+            },
+            'quake_wrong_2': {
+                bg: 'bg-fault',
+                character: 'quake',
+                dialogues: [
+                    { speaker: 'quake', text: "錯了啦！深源地震能量在傳到地面時已經流失很多了。淺源地震（少於70km）才是最致命的！" },
+                    { speaker: 'quake', text: "回去多讀點書吧！我要走了。" }
+                ],
+                next: 'meet_volcano'
+            },
+
+            'meet_volcano': {
+                bg: 'bg-volcano',
+                character: 'volcano',
+                dialogues: [
+                    { speaker: 'narrator', text: "（你來到了夏威夷群島... 這裡有點熱。）" },
+                    { speaker: 'volcano', text: "哼，又是一個人類。我是炎夏。雖然我大部分同伴都在『環太平洋火環』(Ring of Fire)..." },
+                    { speaker: 'volcano', text: "但我可是位於板塊中間的『熱點 (Hotspot) 火山』哦！地幔裡的熱柱讓我噴發。" },
+                    { speaker: 'volcano', text: "人類總是害怕我噴出的岩漿和火山灰... 說我會導致酸雨，甚至讓全球氣溫下降。" },
+                    { speaker: 'volcano', text: "難道我就沒有帶來任何好處嗎？" }
+                ],
+                choices: [
+                    { text: "的確只有破壞，引發饑荒和傳染病。", next: 'volcano_wrong' },
+                    { text: "你有帶來肥沃的土壤和地熱能！", next: 'volcano_right', target: 'volcano', points: 15 }
+                ]
+            },
+            'volcano_wrong': {
+                bg: 'bg-volcano',
+                character: 'volcano',
+                dialogues: [
+                    { speaker: 'volcano', text: "你...你跟其他人一樣膚淺！饑荒和傳染病是短期的次生影響！" },
+                    { speaker: 'volcano', text: "你根本不懂我帶來的豐富礦物質！給我走開！" }
+                ],
+                next: 'meet_tsunami'
+            },
+            'volcano_right': {
+                bg: 'bg-volcano',
+                character: 'volcano',
+                dialogues: [
+                    { speaker: 'volcano', text: "（臉紅）你...你居然知道。沒錯，我的火山灰雖然討厭，但降落後會成為極其肥沃的土壤！" },
+                    { speaker: 'volcano', text: "而且，我還能提供地熱能發電，冷卻的熔岩還能變成寶石。算你識貨！" }
+                ],
+                next: 'meet_tsunami'
+            },
+
+            'meet_tsunami': {
+                bg: 'bg-coast',
+                character: 'tsunami',
+                dialogues: [
+                    { speaker: 'narrator', text: "（最後，你來到了一處平靜的海岸，遇到了一位藍色頭髮的少女。）" },
+                    { speaker: 'tsunami', text: "你好... 我是淼淼。平時我很安靜的，波長很長，在深海裡船隻甚至感覺不到我。" },
+                    { speaker: 'tsunami', text: "但是，只要有人推我一把... 比如海底發生大規模的垂直位移，我就會變成巨浪湧向岸邊。" },
+                    { speaker: 'tsunami', text: "你知道通常是什麼喚醒我（佔全球海嘯87%的主因）嗎？" }
+                ],
+                choices: [
+                    { text: "海底山泥傾瀉 (Undersea Landslides)", next: 'tsunami_wrong' },
+                    { text: "強度達 6.5 級或以上的淺源海底地震", next: 'tsunami_right', target: 'tsunami', points: 15 }
+                ]
+            },
+            'tsunami_wrong': {
+                bg: 'bg-coast',
+                character: 'tsunami',
+                dialogues: [
+                    { speaker: 'tsunami', text: "山泥傾瀉確實會引發我，但那只佔大約 4%。" },
+                    { speaker: 'tsunami', text: "其實主要是強度 6.5 級以上的海底地震。當海床突然變形，我就會被推高... 造成可怕的『沖刷效應』。" }
+                ],
+                next: 'final_test'
+            },
+            'tsunami_right': {
+                bg: 'bg-coast',
+                character: 'tsunami',
+                dialogues: [
+                    { speaker: 'tsunami', text: "嗯，你很聰明。當地震強度達到 6.5 級，海床突然變形，海水受擾被推高，我就會誕生。" },
+                    { speaker: 'tsunami', text: "當我靠近岸邊時，因為海底摩擦力，我會減速，但波幅（高度）會急劇增加。如果岸邊是低窪地區，我就會吞噬一切..." }
+                ],
+                next: 'final_test'
+            },
+
+            'final_test': {
+                bg: 'bg-office',
+                dialogues: [
+                    { speaker: 'narrator', text: "（警報聲突然響起！）" },
+                    { speaker: 'narrator', text: "警告！系統偵測到震君和淼淼正在靠近我們的城市！這不是演習！" },
+                    { speaker: 'narrator', text: "研究員，快告訴我，為了減少建築物在地震中倒塌的風險，我們在城市規劃和建築設計時應該採用什麼方法？" }
+                ],
+                choices: [
+                    { text: "加入隔震裝置 (Base isolation) 和交叉支撐結構", next: 'ending_good', target: 'quake', points: 10 },
+                    { text: "全部用石頭建造，並加高樓層", next: 'ending_bad' }
+                ]
+            },
+            'ending_bad': {
+                bg: 'bg-ending',
+                dialogues: [
+                    { speaker: 'narrator', text: "你在說什麼？！單用石頭沒有彈性，加高樓層更是違反嚴格限制高度的法例！" },
+                    { speaker: 'narrator', text: "建築物缺乏防震技術，城市損失慘重... 你的地理知識完全不及格！" },
+                    { speaker: 'narrator', text: "回去把《機會與風險 03b & 03c》重讀一百遍！！！" }
+                ],
+                next: 'end_game'
+            },
+            'ending_good': {
+                bg: 'bg-ending',
+                dialogues: [
+                    { speaker: 'narrator', text: "非常正確！使用具彈性的物料、剪力牆、交叉支撐和隔震裝置能有效抵禦地震壓力！" },
+                    { speaker: 'narrator', text: "同時，我們也在沿海規劃了『林地保護區』來減緩海嘯衝擊，並啟動了預警系統讓市民撤離到公園等空曠避難區。" },
+                    { speaker: 'narrator', text: "因為你的專業知識，我們成功將災害造成的損失降到最低！" },
+                    { speaker: 'narrator', text: "看來你在這次的邂逅中學到了不少。恭喜你完成研究！" }
+                ],
+                next: 'end_game'
+            }
+        };
+
+        // 工具函數：獲取當前場景的對話數組
+        function getDialogues() {
+            return story[state.currentScene].dialogues;
+        }
+
+        // 開始遊戲
+        function startGame() {
+            document.getElementById('title-screen').classList.add('hidden');
+            document.getElementById('ui-area').classList.remove('hidden');
+            renderDialogue();
+        }
+
+        // 渲染對話
+        function renderDialogue() {
+            const currentStory = story[state.currentScene];
+            const dialogue = currentStory.dialogues[state.dialogueIndex];
+            
+            // 更新背景
+            const gameContainer = document.getElementById('game-container');
+            gameContainer.className = `flex flex-col justify-between ${currentStory.bg}`;
+
+            // 更新角色立繪
+            const charContainer = document.getElementById('character-container');
+            const charEmoji = document.getElementById('character-emoji');
+            
+            if (currentStory.character) {
+                charContainer.classList.remove('hidden');
+                // 重置動畫以重新觸發
+                charContainer.classList.remove('character-enter');
+                void charContainer.offsetWidth; // trigger reflow
+                charContainer.classList.add('character-enter');
+                
+                const charData = characters[currentStory.character];
+                charEmoji.innerHTML = charData.emoji;
+                charEmoji.className = `text-8xl md:text-9xl bg-white rounded-full p-4 shadow-2xl flex items-center justify-center w-32 h-32 md:w-48 md:h-48 border-4 ${charData.color}`;
+            } else {
+                charContainer.classList.add('hidden');
+            }
+
+            // 更新名字
+            const speakerNameBox = document.getElementById('speaker-name');
+            const speakerData = characters[dialogue.speaker] || { name: dialogue.speaker, color: 'border-blue-400' };
+            speakerNameBox.innerText = speakerData.name;
+            
+            // 根據發言者改變名字牌顏色
+            speakerNameBox.className = `absolute -top-4 left-4 text-white px-4 py-1 rounded-lg font-bold shadow-md text-sm md:text-base border-2 bg-gray-800 ${speakerData.color}`;
+
+            // 清空選項
+            document.getElementById('choices-container').innerHTML = '';
+
+            // 開始打字機效果
+            typeWriter(dialogue.text, function() {
+                // 如果是此場景最後一句對話，顯示選項或繼續按鈕
+                if (state.dialogueIndex === currentStory.dialogues.length - 1) {
+                    document.getElementById('dialogue-text').classList.remove('typing-cursor');
+                    if (currentStory.choices) {
+                        renderChoices(currentStory.choices);
+                    }
+                }
+            });
+        }
+
+        let typingTimeout;
+        function typeWriter(text, callback) {
+            state.isTyping = true;
+            const textContainer = document.getElementById('dialogue-text');
+            textContainer.innerHTML = '';
+            textContainer.classList.add('typing-cursor');
+            
+            let i = 0;
+            clearTimeout(typingTimeout);
+
+            function type() {
+                if (i < text.length) {
+                    textContainer.innerHTML += text.charAt(i);
+                    i++;
+                    typingTimeout = setTimeout(type, 30); // 打字速度
+                } else {
+                    state.isTyping = false;
+                    if (callback) callback();
+                }
+            }
+            type();
+        }
+
+        // 點擊對話框推進劇情
+        function advanceDialogue() {
+            const currentStory = story[state.currentScene];
+            
+            // 如果正在打字，直接顯示全句
+            if (state.isTyping) {
+                clearTimeout(typingTimeout);
+                document.getElementById('dialogue-text').innerHTML = currentStory.dialogues[state.dialogueIndex].text;
+                state.isTyping = false;
+                
+                if (state.dialogueIndex === currentStory.dialogues.length - 1) {
+                    document.getElementById('dialogue-text').classList.remove('typing-cursor');
+                    if (currentStory.choices) renderChoices(currentStory.choices);
+                }
+                return;
+            }
+
+            // 如果有選項且是最後一句，不允許點擊推進
+            if (currentStory.choices && state.dialogueIndex === currentStory.dialogues.length - 1) {
+                return;
+            }
+
+            // 下一句
+            if (state.dialogueIndex < currentStory.dialogues.length - 1) {
+                state.dialogueIndex++;
+                renderDialogue();
+            } else if (currentStory.next) {
+                // 跳轉到下一個場景
+                if (currentStory.next === 'end_game') {
+                    showEndScreen();
+                } else {
+                    state.currentScene = currentStory.next;
+                    state.dialogueIndex = 0;
+                    renderDialogue();
+                }
+            }
+        }
+
+        // 顯示選項
+        function renderChoices(choices) {
+            const container = document.getElementById('choices-container');
+            container.innerHTML = '';
+            choices.forEach(choice => {
+                const btn = document.createElement('button');
+                btn.className = "w-full text-left px-4 py-3 bg-gray-800 hover:bg-gray-700 border border-gray-600 rounded-lg text-white font-semibold transition-colors shadow-sm";
+                btn.innerText = choice.text;
+                btn.onclick = (e) => {
+                    e.stopPropagation(); // 防止觸發對話框的點擊事件
+                    handleChoice(choice);
+                };
+                container.appendChild(btn);
+            });
+        }
+
+        // 處理選項選擇
+        function handleChoice(choice) {
+            if (choice.points && choice.target) {
+                state.affection[choice.target] += choice.points;
+                showToast();
+            }
+            state.currentScene = choice.next;
+            state.dialogueIndex = 0;
+            renderDialogue();
+        }
+
+        // 顯示好感度增加提示
+        function showToast() {
+            const toast = document.getElementById('affection-toast');
+            toast.classList.remove('opacity-0');
+            toast.classList.add('opacity-100');
+            setTimeout(() => {
+                toast.classList.remove('opacity-100');
+                toast.classList.add('opacity-0');
+            }, 2000);
+        }
+
+        // 顯示結局結算
+        function showEndScreen() {
+            document.getElementById('ui-area').classList.add('hidden');
+            document.getElementById('character-container').classList.add('hidden');
+            
+            const endScreen = document.createElement('div');
+            endScreen.className = "absolute inset-0 flex flex-col items-center justify-center bg-gray-900 bg-opacity-95 z-50 p-6 text-center";
+            
+            let highestAffection = 0;
+            let bestChar = '';
+            for (const [char, score] of Object.entries(state.affection)) {
+                if (score > highestAffection) {
+                    highestAffection = score;
+                    bestChar = char;
+                }
+            }
+
+            let resultHtml = `<h2 class="text-4xl font-bold mb-6 text-white">研究結案報告</h2>`;
+            
+            if (state.currentScene === 'ending_bad') {
+                resultHtml += `<p class="text-xl text-red-400 mb-6">任務失敗。由於缺乏防護知識，城市被構造災害摧毀了。</p>`;
+            } else {
+                resultHtml += `<p class="text-xl text-green-400 mb-6">任務成功！你掌握了構造災害的知識並作出了正確的防禦決策。</p>`;
+                if (bestChar) {
+                    resultHtml += `
+                        <div class="bg-gray-800 p-6 rounded-xl border-2 ${characters[bestChar].color} mb-6">
+                            <h3 class="text-2xl mb-2">最高好感度達成！</h3>
+                            <div class="text-6xl mb-2">${characters[bestChar].emoji}</div>
+                            <p class="text-lg">你最了解的災害是：<span class="font-bold text-yellow-300">${characters[bestChar].name}</span></p>
+                        </div>
+                    `;
+                }
+            }
+
+            resultHtml += `
+                <button onclick="location.reload()" class="mt-4 px-8 py-3 bg-blue-600 hover:bg-blue-500 rounded-full text-xl font-bold transition transform hover:scale-105 shadow-lg">
+                    重新進行研究
+                </button>
+            `;
+            
+            endScreen.innerHTML = resultHtml;
+            document.getElementById('game-container').appendChild(endScreen);
+        }
+    </script>
+</body>
+</html>
